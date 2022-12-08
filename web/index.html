@@ -1,0 +1,91 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body>
+    <div class="container">
+        <h1>Addition of Vectors using Rust and WebAssembly</h1>
+        <h2>By Jaywan Chung, on May 04, 2022.</h2>
+        <div>
+            [<span id="vec_a"></span>]+[<span id="vec_b"></span>]=[<span id="vec_c"></span>].
+        </div>
+    </div>
+    <!-- Note the usage of `type=module` here as this is an ES6 module -->
+    <script type="module">
+      "use strict";
+      // Use ES module import syntax to import functionality from the module
+      // that we have compiled.
+      //
+      // Note that the `default` import is an initialization function which
+      // will "boot" the module and make it ready to use. Currently browsers
+      // don't support natively imported WebAssembly as an ES module, but
+      // eventually the manual initialization won't be required!
+      import init, { wasm_add } from '../pkg/wasm_add.js';
+
+      // function fetchAndInstantiate(url, importObject) {
+      //   return fetch(url).then(response => response.arrayBuffer()
+      //       ).then(bytes => WebAssembly.instantiate(bytes, importObject)
+      //       ).then(results => results.instance
+      //       );
+      // }
+
+      // async function init() {
+      //   const fetchPromise = fetch('./wasm_add.wasm')
+      //   const { instance } = await WebAssembly.instantiateStreaming(fetchPromise);
+      //   return instance;
+      // }
+
+      async function run() {
+        // First up we need to actually load the wasm file, so we use the
+        // default export to inform it where the wasm file is located on the
+        // server, and then we wait on the returned promise to wait for the
+        // wasm to be loaded.
+        //
+        // It may look like this: `await init('./pkg/without_a_bundler_bg.wasm');`,
+        // but there is also a handy default inside `init` function, which uses
+        // `import.meta` to locate the wasm file relatively to js file.
+        //
+        // Note that instead of a string you can also pass in any of the
+        // following things:
+        //
+        // * `WebAssembly.Module`
+        //
+        // * `ArrayBuffer`
+        //
+        // * `Response`
+        //
+        // * `Promise` which returns any of the above, e.g. `fetch("./path/to/wasm")`
+        //
+        // This gives you complete control over how the module is loaded
+        // and compiled.
+        //
+        // Also note that the promise, when resolved, yields the wasm module's
+        // exports which is the same as importing the `*_bg` module in other
+        // modes
+        await init();
+        // const instance = await init();
+
+        // And afterwards we can use all the functionality defined in wasm.
+        const a = new Float64Array([1.0, 2.0, 3.0]);
+        const b = new Float64Array([-1.0, -2.0, -3.0]);
+        const c = wasm_add(a, b);
+        // const c = instance.exports.wasm_add(a, b);
+        // const c = add(a, b);
+        const sol = new Float64Array([0.0, 0.0, 0.0]);
+
+        console.log(`Correct type=`, c instanceof Float64Array);
+
+        document.getElementById('vec_a').innerText = a;
+        document.getElementById('vec_b').innerText = b;
+        document.getElementById('vec_c').innerText = c;
+
+        console.log(`${a} + ${b} = ${c}`);
+        if ((c[0] !== sol[0]) || (c[1] !== sol[1]) || (c[2] !== sol[2]))
+            throw new Error("wasm addition doesn't work!");
+          
+      }
+
+      run();
+    </script>
+  </body>
+</html>
